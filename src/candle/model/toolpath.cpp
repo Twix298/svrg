@@ -1,4 +1,4 @@
-#include "src/candle/model/toolpath.h"
+#include "toolpath.h"
 
 #include <fstream>
 #include <sstream>
