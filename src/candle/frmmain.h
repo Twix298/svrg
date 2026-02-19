@@ -31,6 +31,7 @@
 #include "drawers/shaderdrawable.h"
 #include "drawers/selectiondrawer.h"
 #include "drawers/machineboundsdrawer.h"
+#include "drawers/meshdrawer.h"
 
 #include "tables/gcodetablemodel.h"
 #include "tables/heightmaptablemodel.h"
@@ -368,6 +369,7 @@ private:
     HeightMapInterpolationDrawer *m_heightMapInterpolationDrawer;
     SelectionDrawer *m_selectionDrawer;
     MachineBoundsDrawer *m_machineBoundsDrawer;
+    MeshDrawer *m_meshDrawer;
 
     // Table models
     GCodeTableModel m_programModel;

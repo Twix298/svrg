@@ -273,6 +273,7 @@ void frmMain::initDrawers()
     m_heightMapInterpolationDrawer = new HeightMapInterpolationDrawer();
     m_selectionDrawer = new SelectionDrawer();
     m_machineBoundsDrawer = new MachineBoundsDrawer();
+    m_meshDrawer = new MeshDrawer();
 
     m_codeDrawer->setViewParser(&m_viewParser);
     m_probeDrawer->setViewParser(&m_probeParser);
@@ -295,7 +296,15 @@ void frmMain::initDrawers()
     ui->glwVisualizer->addDrawable(m_heightMapInterpolationDrawer);
     ui->glwVisualizer->addDrawable(m_selectionDrawer);
     ui->glwVisualizer->addDrawable(m_machineBoundsDrawer);
+    ui->glwVisualizer->addDrawable(m_meshDrawer);
     ui->glwVisualizer->fitDrawable();
+
+    // Add quick action to toggle mesh visibility in the menu bar
+    QAction *actShowMesh = new QAction(tr("Show Mesh"), this);
+    actShowMesh->setCheckable(true);
+    actShowMesh->setChecked(false);
+    connect(actShowMesh, &QAction::toggled, [this](bool checked){ if (m_meshDrawer) m_meshDrawer->setVisible(checked); ui->glwVisualizer->update(); });
+    menuBar()->addAction(actShowMesh);
 
     connect(ui->glwVisualizer, &GLWidget::resized, this, &frmMain::placeVisualizerButtons);
     connect(ui->dockVisualizer, &QDockWidget::visibilityChanged, this, &frmMain::placeVisualizerButtons);
@@ -552,6 +561,38 @@ void frmMain::on_actFileNew_triggered()
 
 void frmMain::on_actFileOpen_triggered()
 {
+    // Open file dialog and handle G-code or mesh files (STL/OBJ)
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open"), m_lastFolder,
+                                                    tr("All supported files (*.nc *.ncc *.ngc *.tap *.txt *.gcode *.stl *.obj);;G-Code files (*.nc *.ncc *.ngc *.tap *.txt *.gcode);;Mesh files (*.stl *.obj)"));
+    if (fileName.isEmpty()) return;
+
+    // remember last folder
+    m_lastFolder = fileName.left(fileName.lastIndexOf('/'));
+
+    QString lower = fileName.toLower();
+    if (lower.endsWith(".stl") || lower.endsWith(".obj")) {
+        // Try to load mesh and display via MeshDrawer
+        candle::geometry::Mesh mesh;
+        bool ok = false;
+        if (lower.endsWith(".stl")) ok = candle::geometry::MeshImporter::loadSTL(fileName.toStdString(), mesh);
+        else if (lower.endsWith(".obj")) ok = candle::geometry::MeshImporter::loadOBJ(fileName.toStdString(), mesh);
+
+        if (ok) {
+            candle::geometry::MeshImporter::repairSimple(mesh);
+            if (m_meshDrawer) {
+                m_meshDrawer->setMesh(mesh);
+                m_meshDrawer->setVisible(true);
+            }
+            addRecentFile(fileName);
+            updateRecentFilesMenu();
+            return;
+        } else {
+            QMessageBox::warning(this, tr("Open mesh"), tr("Failed to load mesh file."));
+            return;
+        }
+    }
+
+    // Fallback to existing behaviour for G-code / heightmap files
     on_cmdFileOpen_clicked();
 }
 
